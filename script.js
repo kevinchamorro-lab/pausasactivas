@@ -1,4 +1,230 @@
-// --- 🎵 MOTOR DE AUDIO (SINTETIZADOR NATIVO) 🎵 ---
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Pausas Activas Profe</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <style>
+        /* --- ESTILOS BASE --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Nunito', sans-serif; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            display: flex; justify-content: center; align-items: center; 
+            min-height: 100vh; height: 100dvh; overflow: hidden; 
+            transition: background 1s ease; margin: 0; background-color: #1a1a1a;
+        }
+
+        body.theme-morning { background: linear-gradient(135deg, #FF7E5F 0%, #FEB47B 100%); }
+        body.theme-afternoon { background: linear-gradient(135deg, #00c6ff 0%, #0072ff 100%); }
+        body.theme-night { background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%); }
+
+        #app-container {
+            width: 100%; height: 100%; display: flex; flex-direction: column;
+            background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+        }
+
+        /* --- ENCABEZADO Y PERFIL --- */
+        #sidebar {
+            flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 20px; background: rgba(0,0,0,0.2); border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .desktop-nav { display: none; }
+
+        .profile-section { display: flex; align-items: center; gap: 15px; color: white; }
+        .profile-pic-wrapper { 
+            width: 50px; height: 50px; border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.6); position: relative; overflow: hidden;
+            cursor: pointer; flex-shrink: 0; display: block;
+        }
+        .profile-pic { width: 100%; height: 100%; object-fit: cover; background: #fff; }
+        #file-input { display: none; }
+        
+        .profile-info { display: flex; flex-direction: column; }
+        .profile-name { font-size: 1.1rem; font-weight: 900; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 8px;}
+        
+        .streak-badge { background: #ff4757; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: 900; box-shadow: 0 2px 5px rgba(255,71,87,0.4); animation: pulse-streak 2s infinite; }
+        @keyframes pulse-streak { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+
+        .profile-status { font-size: 0.75rem; font-weight: 600; opacity: 0.9; background: rgba(0,0,0,0.3); padding: 2px 8px; border-radius: 10px; display: inline-block; margin-top: 3px; width: fit-content; }
+
+        .bell-btn { background: rgba(255,255,255,0.2); border: none; width: 40px; height: 40px; border-radius: 50%; color: white; font-size: 1.1rem; cursor: pointer; display: flex; justify-content: center; align-items: center; flex-shrink: 0; transition: 0.3s; }
+        .bell-btn.active { background: #FFD700; color: #000; animation: shake 0.5s; }
+        @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-3px) rotate(-5deg);} 75% {transform: translateX(3px) rotate(5deg);} }
+
+        /* --- CONTENIDO PRINCIPAL --- */
+        #main-content { flex-grow: 1; overflow: hidden; position: relative; }
+        .view { display: none; width: 100%; height: 100%; overflow-y: auto; padding: 20px; animation: fadeIn 0.3s ease; }
+        .view.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .view-header { margin-bottom: 20px; color: white; }
+        .view-header h2 { font-size: 1.5rem; font-weight: 900; text-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+
+        /* 🎯 Tarjeta de Misión Diaria 🎯 */
+        .daily-mission-card { background: linear-gradient(135deg, #FFD700 0%, #FF8C00 100%); border-radius: 20px; padding: 15px; margin-bottom: 20px; color: #000; box-shadow: 0 10px 20px rgba(255,140,0,0.3); display: flex; align-items: center; gap: 15px; cursor: pointer; transition: 0.2s; position: relative; overflow: hidden; }
+        .daily-mission-card:active { transform: scale(0.96); }
+        .daily-mission-card.completed { background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; pointer-events: none; }
+        .mission-icon { width: 50px; height: 50px; background: rgba(255,255,255,0.3); border-radius: 15px; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; flex-shrink: 0; }
+        .mission-badge { position: absolute; top: 0; right: 0; background: #000; color: #FFD700; font-size: 0.6rem; font-weight: 900; padding: 4px 10px; border-bottom-left-radius: 15px; }
+        .daily-mission-card.completed .mission-badge { background: #fff; color: #10B981; }
+
+        /* Grid de Rutinas */
+        .routines-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
+        .routine-card { background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 15px; cursor: pointer; transition: all 0.2s; color: white; display: flex; align-items: center; }
+        .routine-card:active { transform: scale(0.96); background: rgba(0,0,0,0.4); }
+        .routine-icon { width: 50px; height: 50px; background: white; border-radius: 15px; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; margin-right: 15px; flex-shrink: 0; }
+        
+        /* Temporizador */
+        .timer-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100%; color: white; text-align: center; }
+        .timer-circle { width: 65vw; max-width: 280px; height: 65vw; max-height: 280px; border-radius: 50%; background: rgba(0,0,0,0.3); border: 6px solid rgba(255,255,255,0.3); display: flex; flex-direction: column; justify-content: center; align-items: center; margin: 20px 0 30px; transition: all 0.3s; }
+        .timer-circle.running { border-color: #10B981; box-shadow: 0 0 30px rgba(16,185,129,0.4); animation: pulse 1s infinite alternate; }
+        @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.05); } }
+        .time-display { font-size: 4.5rem; font-weight: 900; line-height: 1; text-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        
+        .controls { display: flex; gap: 20px; margin-bottom: 20px; }
+        .btn-action { border: none; width: 65px; height: 65px; border-radius: 50%; font-size: 1.8rem; cursor: pointer; color: white; box-shadow: 0 8px 15px rgba(0,0,0,0.3); transition: 0.2s; display: flex; justify-content: center; align-items: center; }
+        .btn-play { background: #10B981; } .btn-pause { background: #F59E0B; } .btn-stop { background: #EF4444; }
+
+        /* --- NAVEGACIÓN INFERIOR --- */
+        #bottom-nav {
+            flex-shrink: 0; background: rgba(0,0,0,0.5); border-top: 1px solid rgba(255,255,255,0.1);
+            display: flex; justify-content: space-around; padding: 12px 0; z-index: 50; padding-bottom: calc(12px + env(safe-area-inset-bottom));
+        }
+        .nav-item-mob { display: flex; flex-direction: column; align-items: center; color: rgba(255,255,255,0.5); font-size: 0.75rem; font-weight: 800; cursor: pointer; transition: 0.2s; }
+        .nav-item-mob i { font-size: 1.4rem; margin-bottom: 4px; }
+        .nav-item-mob.active { color: #10B981; transform: translateY(-3px); text-shadow: 0 2px 10px rgba(16,185,129,0.5); }
+
+        /* --- DISEÑO COMPUTADORA --- */
+        @media (min-width: 768px) {
+            #app-container { flex-direction: row; width: 95%; max-width: 1200px; height: 90vh; border-radius: 30px; box-shadow: 0 30px 60px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.3); }
+            #sidebar { width: 320px; flex-direction: column; justify-content: flex-start; padding: 40px 25px; border-bottom: none; border-right: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.15); }
+            .profile-section { flex-direction: column; text-align: center; width: 100%; gap: 10px; }
+            .profile-pic-wrapper { width: 130px; height: 130px; border-width: 4px; margin: 0 auto; }
+            .profile-info { align-items: center; margin-bottom: 20px; }
+            .profile-name { font-size: 1.6rem; flex-direction: column; gap: 5px;}
+            .profile-status { font-size: 0.9rem; padding: 5px 15px; border-radius: 20px; }
+            .desktop-nav { display: flex; flex-direction: column; width: 100%; gap: 15px; margin-top: 20px; }
+            .nav-btn { background: rgba(255,255,255,0.1); border: none; padding: 15px 20px; border-radius: 15px; color: white; font-size: 1.1rem; font-weight: 800; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 15px; transition: all 0.3s; }
+            .nav-btn.active { background: linear-gradient(90deg, #10B981, #059669); }
+            #bottom-nav { display: none !important; }
+            #main-content { border-radius: 0 30px 30px 0; }
+        }
+
+        /* --- MODALES --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; opacity: 0; pointer-events: none; transition: 0.4s; backdrop-filter: blur(5px); padding: 20px; }
+        .modal-overlay.show { opacity: 1; pointer-events: auto; }
+        .modal-box { background: white; width: 100%; max-width: 400px; padding: 35px 25px; border-radius: 30px; text-align: center; transform: translateY(50px); transition: 0.4s; }
+        .modal-overlay.show .modal-box { transform: translateY(0); }
+        .modal-box h3 { font-size: 1.6rem; font-weight: 900; color: #1e293b; margin-bottom: 10px; }
+        .modal-box p { font-size: 1.1rem; color: #475569; margin-bottom: 25px; }
+        .btn-modal { color: white; border: none; padding: 15px; border-radius: 15px; font-size: 1.1rem; font-weight: 800; cursor: pointer; width: 100%; }
+        .btn-green { background: #10B981; box-shadow: 0 8px 15px rgba(16,185,129,0.3); }
+        .btn-red { background: #EF4444; box-shadow: 0 8px 15px rgba(239,68,68,0.3); }
+
+        /* Toast UI (Alertas) */
+        #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px); background: #1e293b; color: white; padding: 15px 25px; border-radius: 20px; font-size: 1rem; font-weight: 800; opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 2000; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    </style>
+</head>
+<body>
+
+    <div id="toast">🔔 Alarma configurada</div>
+
+    <div id="modal-quote" class="modal-overlay">
+        <div class="modal-box">
+            <div id="modal-icon" style="font-size: 3.5rem; margin-bottom: 10px;">☀️</div>
+            <h3 id="modal-greeting">¡Buen día!</h3>
+            <p id="quote-text" style="font-style: italic;">"La educación es el arma más poderosa..."</p>
+            <button class="btn-modal btn-green" onclick="closeModal('modal-quote')">¡A dar clase! 🚀</button>
+        </div>
+    </div>
+
+    <div id="modal-punishment" class="modal-overlay">
+        <div class="modal-box">
+            <div style="font-size: 4rem; margin-bottom: 10px;">📉</div>
+            <h3>¡Uy, Profe! Reprobado</h3>
+            <p>Dejaste a tus alumnos sin pausa activa ayer y perdiste tu racha de fuego. ¡Hoy toca recuperar esos puntos!</p>
+            <button class="btn-modal btn-red" onclick="closeModal('modal-punishment')">Aceptar el regaño 😞</button>
+        </div>
+    </div>
+
+    <div id="modal-reward" class="modal-overlay">
+        <div class="modal-box">
+            <div style="font-size: 4rem; margin-bottom: 10px;">🔥</div>
+            <h3>¡Misión Cumplida!</h3>
+            <p>Completaste la pausa diaria. ¡Tu racha ha aumentado! Sigue así, profe estrella.</p>
+            <button class="btn-modal btn-green" onclick="closeModal('modal-reward')">¡Excelente! 🚀</button>
+        </div>
+    </div>
+
+    <div id="app-container">
+        <aside id="sidebar">
+            <div class="profile-section">
+                <label for="file-input" class="profile-pic-wrapper">
+                    <img id="profile-img" src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="Perfil" class="profile-pic">
+                </label>
+                <input type="file" id="file-input" accept="image/*" onchange="uploadProfilePic(event)">
+                
+                <div class="profile-info">
+                    <h2 class="profile-name">
+                        Profe 
+                        <span class="streak-badge" id="streak-counter">🔥 0</span>
+                    </h2>
+                    <span class="profile-status" id="time-status">Modo Mañana</span>
+                </div>
+            </div>
+            <button class="bell-btn" id="bell-btn" onclick="toggleNotifications()"><i class="fas fa-bell"></i></button>
+            
+            <nav class="desktop-nav">
+                <button class="nav-btn active" onclick="switchView('library')" id="btn-pc-lib"><i class="fas fa-bolt"></i> Dinámicas</button>
+                <button class="nav-btn" onclick="switchView('history')" id="btn-pc-hist"><i class="fas fa-trophy"></i> Mis Logros</button>
+            </nav>
+        </aside>
+
+        <main id="main-content">
+            <div id="view-library" class="view active">
+                <div class="view-header"><h2><i class="fas fa-gamepad"></i> Dinámicas</h2></div>
+                <div id="daily-mission-container"></div>
+                <h3 style="color: white; font-size: 1.1rem; margin-bottom: 15px; opacity: 0.8;">Otras rutinas:</h3>
+                <div class="routines-grid" id="routines-list"></div>
+            </div>
+
+            <div id="view-timer" class="view">
+                <button onclick="switchView('library')" style="background: rgba(255,255,255,0.2); border:none; padding: 10px 20px; border-radius: 12px; color: white; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                    <i class="fas fa-arrow-left"></i> Volver
+                </button>
+                <div class="timer-wrapper">
+                    <h2 style="font-size: 2rem; font-weight: 900; margin-bottom: 5px;" id="timer-title">Actividad</h2>
+                    <p style="font-size: 1rem; opacity: 0.9;" id="timer-desc">¡Motiva a tus alumnos!</p>
+                    <div class="timer-circle" id="timer-ui"><div class="time-display" id="time-display">00:00</div></div>
+                    <div class="controls">
+                        <button class="btn-action btn-play" id="btn-play" onclick="startTimer()"><i class="fas fa-play"></i></button>
+                        <button class="btn-action btn-pause" id="btn-pause" onclick="pauseTimer()" style="display: none;"><i class="fas fa-pause"></i></button>
+                        <button class="btn-action btn-stop" onclick="stopTimer()"><i class="fas fa-square"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-history" class="view">
+                <div class="view-header"><h2><i class="fas fa-medal"></i> Historial de XP</h2></div>
+                <div id="history-list"></div>
+            </div>
+        </main>
+
+        <nav id="bottom-nav">
+            <div class="nav-item-mob active" onclick="switchView('library')" id="btn-mob-lib"><i class="fas fa-bolt"></i><span>Dinámicas</span></div>
+            <div class="nav-item-mob" onclick="switchView('history')" id="btn-mob-hist"><i class="fas fa-trophy"></i><span>Logros</span></div>
+        </nav>
+    </div>
+
+    <script>
+        // --- 🎵 MOTOR DE AUDIO (SINTETIZADOR NATIVO) 🎵 ---
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         
         // Desbloquear el audio en el primer toque de la pantalla (requerido por los navegadores)
@@ -338,3 +564,6 @@
                 </div>
             `).join('');
         }
+    </script>
+</body>
+</html>
